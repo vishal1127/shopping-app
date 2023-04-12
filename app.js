@@ -21,11 +21,11 @@ app.use(express.static(path.join(__dirname, "public")));
 app.use((req, res, next) => {
   User.findById("64354b0b16f1ae6ffe4079ff")
     .then((user) => {
-      req.user = user;
+      req.user = new User(user.name, user.email, user.cart, user._id); // now the object stores all
+      //the user data with the methods and not just the data returned by the database
       next();
     })
     .catch((err) => console.log(err));
-  next();
 });
 
 app.use("/admin", adminRoutes);
