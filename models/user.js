@@ -43,6 +43,43 @@ class User {
       );
   }
 
+  getCart() {
+    const db = getDb();
+    const productIds = this.cart.items.map((i) => {
+      //create an array of all the product ids present in the cart
+      return i.productId;
+    });
+    return db
+      .collection("products")
+      .find({ _id: { $in: productIds } })
+      .toArray()
+      .then((products) => {
+        //returns the products info having the productIds as in the array
+        return products.map((p) => {
+          // now we add the quantity field with the product info if present in cart
+          return {
+            ...p,
+            quantity: this.cart.items.find((i) => {
+              return i.productId.toString() == p._id.toString();
+            }).quantity,
+          };
+        });
+      });
+  }
+
+  deleteFromCart(productId) {
+    const updatedCartItems = this.cart.items.filter((i) => {
+      return i.productId.toString() !== productId.toString();
+    });
+    const db = getDb();
+    return db
+      .collection("users")
+      .updateOne(
+        { _id: new ObjectId(this._id) },
+        { $set: { cart: { items: updatedCartItems } } }
+      );
+  }
+
   static findById(userId) {
     const db = getDb();
     return db
