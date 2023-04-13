@@ -1,59 +1,158 @@
-const mongodb = require("mongodb");
-const getDb = require("../util/database").getDb;
+const mongoose = require("mongoose");
 
-const ObjectId = mongodb.ObjectId;
-class User {
-  constructor(username, email, cart, id) {
-    this.name = username;
-    this.email = email;
-    this.cart = cart; // {items: []}
-    this._id = id;
-  }
+const Schema = mongoose.Schema;
 
-  save() {
-    const db = getDb();
-    db.collection("users").insertOne(this);
-  }
+const userSchema = new Schema({
+  name: {
+    type: String,
+    required: true,
+  },
+  email: {
+    type: String,
+    required: true,
+  },
+  cart: {
+    items: [
+      {
+        productId: {
+          type: Schema.Types.ObjectId,
+          ref: "Product",
+          required: true,
+        },
+        quantity: {
+          type: Number,
+          required: true,
+        },
+      },
+    ],
+  },
+});
 
-  addToCart(product) {
-    const cartProductIndex = this.cart.items.findIndex((cp) => {
-      return cp.productId.toString() == product._id.toString();
-    });
-    let newQuantity = 1;
-    const updatedCartItems = [...this.cart.items];
-    if (cartProductIndex >= 0) {
-      newQuantity = this.cart.items[cartProductIndex].quantity + 1;
-      updatedCartItems[cartProductIndex].quantity = newQuantity; //updates the quantity of the product present
-    } else {
-      updatedCartItems.push({
-        productId: new ObjectId(product._id),
-        quantity: newQuantity,
-      }); // adds a new product
-    }
-    const updatedCart = {
-      items: updatedCartItems,
-    }; // adding
-    //a new product to a cart with product id as reference
-    const db = getDb();
-    return db
-      .collection("users")
-      .updateOne(
-        { _id: new ObjectId(this._id) },
-        { $set: { cart: updatedCart } }
-      );
-  }
+module.exports = mongoose.model("User", userSchema);
+// const mongodb = require("mongodb");
+// const getDb = require("../util/database").getDb;
 
-  static findById(userId) {
-    const db = getDb();
-    return db
-      .collection("users")
-      .findOne({ _id: new ObjectId(userId) })
-      .then((user) => {
-        console.log("user found", user);
-        return user;
-      })
-      .catch((err) => console.log(err));
-  }
-}
+// const ObjectId = mongodb.ObjectId;
+// class User {
+//   constructor(username, email, cart, id) {
+//     this.name = username;
+//     this.email = email;
+//     this.cart = cart; // {items: []}
+//     this._id = id;
+//   }
 
-module.exports = User;
+//   save() {
+//     const db = getDb();
+//     db.collection("users").insertOne(this);
+//   }
+
+//   addToCart(product) {
+//     const cartProductIndex = this.cart.items.findIndex((cp) => {
+//       return cp.productId.toString() == product._id.toString();
+//     });
+//     let newQuantity = 1;
+//     const updatedCartItems = [...this.cart.items];
+//     if (cartProductIndex >= 0) {
+//       newQuantity = this.cart.items[cartProductIndex].quantity + 1;
+//       updatedCartItems[cartProductIndex].quantity = newQuantity; //updates the quantity of the product present
+//     } else {
+//       updatedCartItems.push({
+//         productId: new ObjectId(product._id),
+//         quantity: newQuantity,
+//       }); // adds a new product
+//     }
+//     const updatedCart = {
+//       items: updatedCartItems,
+//     }; // adding
+//     //a new product to a cart with product id as reference
+//     const db = getDb();
+//     return db
+//       .collection("users")
+//       .updateOne(
+//         { _id: new ObjectId(this._id) },
+//         { $set: { cart: updatedCart } }
+//       );
+//   }
+
+//   getCart() {
+//     const db = getDb();
+//     const productIds = this.cart.items.map((i) => {
+//       //create an array of all the product ids present in the cart
+//       return i.productId;
+//     });
+//     return db
+//       .collection("products")
+//       .find({ _id: { $in: productIds } })
+//       .toArray()
+//       .then((products) => {
+//         //returns the products info having the productIds as in the array
+//         return products.map((p) => {
+//           // now we add the quantity field with the product info if present in cart
+//           return {
+//             ...p,
+//             quantity: this.cart.items.find((i) => {
+//               return i.productId.toString() == p._id.toString();
+//             }).quantity,
+//           };
+//         });
+//       });
+//   }
+
+//   deleteFromCart(productId) {
+//     const updatedCartItems = this.cart.items.filter((i) => {
+//       return i.productId.toString() !== productId.toString();
+//     });
+//     const db = getDb();
+//     return db
+//       .collection("users")
+//       .updateOne(
+//         { _id: new ObjectId(this._id) },
+//         { $set: { cart: { items: updatedCartItems } } }
+//       );
+//   }
+
+//   addOrder() {
+//     const db = getDb();
+//     return this.getCart()
+//       .then((products) => {
+//         const order = {
+//           items: products,
+//           user: {
+//             _id: new ObjectId(this._id),
+//             name: this.name,
+//             email: this.email,
+//           },
+//         };
+//         return db.collection("orders").insertOne(order);
+//       })
+//       .then((result) => {
+//         this.cart = { items: [] }; //empty the user object
+//         return db.collection("users").updateOne(
+//           { _id: new ObjectId(this._id) },
+//           { $set: { cart: { items: [] } } } //empty cart in database
+//         );
+//       });
+//   }
+
+//   getOrders() {
+//     const db = getDb();
+//     return db
+//       .collection("orders")
+//       .find({ "user._id": new ObjectId(this._id) })
+//       .toArray();
+//   }
+
+//   static findById(userId) {
+//     const db = getDb();
+//     return db
+//       .collection("users")
+//       .findOne({ _id: new ObjectId(userId) })
+//       .then((user) => {
+//         console.log("user found", user);
+//         return user;
+//       })
+//       .catch((err) => console.log(err));
+//   }
+// }
+
+// module.exports = User;
